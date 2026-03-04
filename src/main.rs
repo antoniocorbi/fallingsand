@@ -26,7 +26,7 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| {
             let cc = cc;
-            Ok(Box::new(app::FallingSandApp::new(cc)))
+            Ok(Box::new(app::FallingSandAppUi::new(cc)))
         }),
     )
 }
