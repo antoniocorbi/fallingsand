@@ -29,11 +29,6 @@ pub struct FallingSandApp {
 pub struct FallingSandAppUi {
     pub fsapp: FallingSandApp,
     pub stroke: Stroke,
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
 }
 
 // -- Impl: ---------------------------------------------------------------
@@ -47,12 +42,8 @@ impl Default for FallingSandAppUi {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
-            // Example stuff:
             stroke: Stroke::new(2.0, Color32::LIGHT_RED.linear_multiply(1.25)),
             fsapp: Default::default(),
-            //..Default::default()
         }
     }
 }
@@ -78,7 +69,7 @@ impl AppUi for FallingSandAppUi {
     fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Response {
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height() - 50.0),
-            Sense::hover(),
+            Sense::CLICK,
         );
 
         let to_screen = emath::RectTransform::from_to(
@@ -88,6 +79,23 @@ impl AppUi for FallingSandAppUi {
 
         let from_screen = to_screen.inverse();
 
+        // 2. Comprobamos el click izquierdo
+        if response.clicked() {
+            println!("¡Click izquierdo detectado en el Painter!");
+            if let Some(pos) = response.interact_pointer_pos() {
+                println!("Click en la posición: {:?}", pos);
+            }
+        }
+
+        // 3. Dibujamos algo basado en el estado
+        let color = if response.hovered() {
+            // egui::Color32::RED
+            self.stroke.color
+        } else {
+            egui::Color32::BLUE
+        };
+        painter.circle_filled(response.rect.center(), 40.0, color);
+
         response
     }
 
@@ -95,7 +103,7 @@ impl AppUi for FallingSandAppUi {
         //let mut stroke: Stroke = self.stroke;
 
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("Grains").color(egui::Color32::YELLOW));
+            ui.label(egui::RichText::new("Grains props.").color(egui::Color32::YELLOW));
             ui.add(&mut self.stroke);
             ui.separator();
             if ui.button("Clear Canvas").clicked() {
@@ -176,10 +184,10 @@ impl eframe::App for FallingSandAppUi {
             //     ui.text_edit_singleline(&mut self.label);
             // });
 
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
+            // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
+            // if ui.button("Increment").clicked() {
+            //     self.value += 1.0;
+            // }
 
             ui.separator();
 
