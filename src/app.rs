@@ -80,6 +80,20 @@ impl AppUi for FallingSandAppUi {
         let from_screen = to_screen.inverse();
 
         // 2. Comprobamos el click izquierdo
+        if response.secondary_clicked() {
+            println!("¡Click derecho detectado en el Painter!");
+            if let Some(pos) = response.interact_pointer_pos() {
+                println!("Click en la posición: {:?}", pos);
+            }
+        }
+
+        if response.middle_clicked() {
+            println!("¡Click central detectado en el Painter!");
+            if let Some(pos) = response.interact_pointer_pos() {
+                println!("Click en la posición: {:?}", pos);
+            }
+        }
+
         if response.clicked() {
             println!("¡Click izquierdo detectado en el Painter!");
             if let Some(pos) = response.interact_pointer_pos() {
