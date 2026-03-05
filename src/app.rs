@@ -1,3 +1,18 @@
+// Copyright (C) 2026  Antonio-Miguel Corbi Bellot
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
 
@@ -16,6 +31,9 @@ trait AppUi {
     fn draw_point(&mut self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
     fn draw_lines(&mut self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter);
 }
+
+// -- Consts: -------------------------------------------------------------
+const NELEMENTS: usize = 5;
 
 // -- Types: --------------------------------------------------------------
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -42,7 +60,7 @@ pub struct FallingSandAppUi {
 impl Default for FallingSandApp {
     fn default() -> Self {
         Self {
-            data: vec![vec![0; 256]; 256],
+            data: vec![vec![0; NELEMENTS]; NELEMENTS],
         }
     }
 }
@@ -55,9 +73,12 @@ impl Default for FallingSandAppUi {
         let w2s = emath::RectTransform::from_to(world_rect, screen_rect);
         let s2w = w2s.inverse();
 
+        // println!("Just created app has:");
+        // fsapp.show_data();
+
         Self {
             // Example stuff:
-            fsapp: Default::default(),
+            fsapp,
             stroke: Stroke::new(2.0, Color32::LIGHT_RED.linear_multiply(1.25)),
             world_rect,
             screen_rect,
@@ -68,11 +89,11 @@ impl Default for FallingSandAppUi {
 }
 
 impl FallingSandApp {
-    fn nrows(&self) -> usize {
+    pub fn nrows(&self) -> usize {
         self.data.len()
     }
 
-    fn ncols(&self) -> usize {
+    pub fn ncols(&self) -> usize {
         self.data[0].len()
     }
 
@@ -80,6 +101,18 @@ impl FallingSandApp {
         let min = pos2(0.0, 0.0);
         let size: Vec2 = Vec2::new(self.ncols() as f32, self.nrows() as f32);
         Rect::from_min_size(min, size)
+    }
+
+    pub fn show_data(&self) {
+        // println!("r:{} / c: {}", self.nrows(), self.ncols());
+        println!("----------------------------------");
+        for r in 0..self.nrows() {
+            for c in 0..self.ncols() {
+                print!("{:2}", self.data[r][c]);
+            }
+            println!();
+        }
+        // println!("----------------------------------");
     }
 }
 
@@ -91,11 +124,12 @@ impl FallingSandAppUi {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
-        } else {
-            Default::default()
-        }
+        // if let Some(storage) = cc.storage {
+        //     eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+        // } else {
+        //     Default::default()
+        // }
+        Default::default()
     }
 
     pub fn update_transforms(&mut self, screen_rect: Rect) {
@@ -121,6 +155,12 @@ impl FallingSandAppUi {
 
     pub fn rect_to_world(&self, rect: Rect) -> Rect {
         self.s2w.transform_rect(rect)
+    }
+    // -- Delegates: ----------------------------------------------------------
+    delegate! {
+          to self.fsapp {
+            pub fn show_data(&self);
+          }
     }
 }
 
@@ -148,6 +188,7 @@ impl AppUi for FallingSandAppUi {
             if let Some(pos) = response.interact_pointer_pos() {
                 println!("Click en la posición: {:?}", pos);
             }
+            self.show_data();
         }
 
         if response.clicked() {
