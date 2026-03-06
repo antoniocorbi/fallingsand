@@ -34,7 +34,7 @@ trait AppUi {
 }
 
 // -- Consts: -------------------------------------------------------------
-const NELEMENTS: usize = 5;
+const NELEMENTS: usize = 50;
 
 // -- Types: --------------------------------------------------------------
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -100,8 +100,12 @@ impl FallingSandApp {
 
     fn world_rect(&self) -> Rect {
         let min = pos2(0.0, 0.0);
-        let size: Vec2 = Vec2::new((self.ncols() as f32) - 1.0, (self.nrows() as f32) - 1.0);
-        Rect::from_min_size(min, size)
+        let w = self.ncols() as f32 - 1.0;
+        let h = self.nrows() as f32 - 1.0;
+        //let size: Vec2 = Vec2::new(w, h);
+        let max = pos2(w, h);
+        //Rect::from_min_size(min, size)
+        Rect::from_min_max(min, max)
     }
 
     pub fn show_data(&self) {
@@ -187,7 +191,7 @@ impl AppUi for FallingSandAppUi {
     fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Response {
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height() - 50.0),
-            Sense::CLICK,
+            Sense::DRAG | Sense::CLICK,
         );
 
         // Compute transforms: w2s + s2w
@@ -195,14 +199,14 @@ impl AppUi for FallingSandAppUi {
 
         // 2. Comprobamos el click izquierdo
         if response.secondary_clicked() {
-            println!("¡Click derecho detectado en el Painter!");
+            //println!("¡Click derecho detectado en el Painter!");
             if let Some(pos) = response.interact_pointer_pos() {
                 println!("Click en la posición: {:?}", pos);
             }
         }
 
         if response.middle_clicked() {
-            println!("¡Click central detectado en el Painter!");
+            //println!("¡Click central detectado en el Painter!");
             if let Some(pos) = response.interact_pointer_pos() {
                 println!("Click en la posición: {:?}", pos);
             }
@@ -210,11 +214,32 @@ impl AppUi for FallingSandAppUi {
         }
 
         if response.clicked() {
-            println!("¡Click izquierdo detectado en el Painter!");
+            //println!("¡Click izquierdo detectado en el Painter!");
             if let Some(pos) = response.interact_pointer_pos() {
                 let wpos = self.pos2_to_world(pos);
-                let wx = wpos.x as usize;
-                let wy = wpos.y as usize;
+                let wx = wpos.x.round() as usize;
+                let wy = wpos.y.round() as usize;
+                // println!(
+                //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
+                //     pos, wpos, wx, wy,
+                // );
+                self[wy][wx] = 1;
+            }
+        }
+
+        if response.dragged() {
+            // Obtenemos la posición actual del puntero
+            if let Some(pos) = response.interact_pointer_pos() {
+                // Dibujamos un círculo donde esté el ratón mientras arrastramos
+                painter.circle_filled(pos, 2.0, egui::Color32::YELLOW);
+
+                // También puedes obtener cuánto se ha movido desde el frame anterior
+                // let delta = response.drag_delta();
+                // println!("Moviendo: {:?}", delta);
+
+                let wpos = self.pos2_to_world(pos);
+                let wx = wpos.x.round() as usize;
+                let wy = wpos.y.round() as usize;
                 // println!(
                 //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
                 //     pos, wpos, wx, wy,
