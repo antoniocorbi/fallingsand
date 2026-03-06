@@ -20,14 +20,14 @@ type Point2D = Pos2;
 use delegate::delegate;
 use egui::{
     emath::{self, RectTransform},
-    pos2, Color32, Frame, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
+    pos2, Color32, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
 use std::ops::{Index, IndexMut};
 
 // -- Traits: -------------------------------------------------------------
 
 trait AppUi {
-    fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Response;
+    fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Painter;
     fn create_stroke_widget(&mut self, ui: &mut Ui) -> egui::Response;
     fn draw_point(&mut self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
     fn draw_lines(&mut self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter);
@@ -113,7 +113,8 @@ impl FallingSandApp {
         println!("----------------------------------");
         for r in 0..self.nrows() {
             for c in 0..self.ncols() {
-                print!("{:2}", self.data[r][c]);
+                let e = if self.data[r][c] == 0 { '.' } else { '+' };
+                print!("{:1}", e);
             }
             println!();
         }
@@ -161,6 +162,8 @@ impl FallingSandAppUi {
     pub fn rect_to_world(&self, rect: Rect) -> Rect {
         self.s2w.transform_rect(rect)
     }
+
+    pub fn draw_contents(&self, painter: egui::Painter) {}
     // -- Delegates: ----------------------------------------------------------
     delegate! {
           to self.fsapp {
@@ -188,7 +191,7 @@ impl IndexMut<usize> for FallingSandAppUi {
 }
 
 impl AppUi for FallingSandAppUi {
-    fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Response {
+    fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Painter {
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height() - 50.0),
             Sense::DRAG | Sense::CLICK,
@@ -227,11 +230,13 @@ impl AppUi for FallingSandAppUi {
             }
         }
 
-        if response.dragged() {
+        if response.dragged_by(PointerButton::Primary) {
             // Obtenemos la posición actual del puntero
             if let Some(pos) = response.interact_pointer_pos() {
+                let ctx = ui.ctx();
+                ctx.send_viewport_cmd(egui::ViewportCommand::CursorVisible(false));
                 // Dibujamos un círculo donde esté el ratón mientras arrastramos
-                painter.circle_filled(pos, 2.0, egui::Color32::YELLOW);
+                painter.circle_filled(pos, 2.0, self.stroke.color);
 
                 // También puedes obtener cuánto se ha movido desde el frame anterior
                 // let delta = response.drag_delta();
@@ -248,6 +253,12 @@ impl AppUi for FallingSandAppUi {
             }
         }
 
+        if response.drag_stopped_by(PointerButton::Primary) {
+            let ctx = ui.ctx();
+            // Útil si el usuario estaba arrastrando y soltó el botón
+            ctx.send_viewport_cmd(egui::ViewportCommand::CursorVisible(true));
+        }
+
         // 3. Dibujamos algo basado en el estado
         let color = if response.hovered() {
             // egui::Color32::RED
@@ -255,10 +266,13 @@ impl AppUi for FallingSandAppUi {
         } else {
             egui::Color32::LIGHT_GRAY
         };
-        //painter.circle_filled(response.rect.center(), 40.0, color);
-        self.draw_point(response.rect.center(), color, 40.0, &painter);
 
-        response
+        // Feedback
+        // self.draw_point(response.rect.center(), color, 40.0, &painter);
+        //painter.circle_filled(response.rect.center(), 40.0, color);
+
+        //response
+        painter
     }
 
     fn create_stroke_widget(&mut self, ui: &mut egui::Ui) -> egui::Response {
@@ -352,7 +366,8 @@ impl eframe::App for FallingSandAppUi {
 
             ui.separator();
 
-            self.create_drawing_widget(ui);
+            let painter = self.create_drawing_widget(ui);
+            self.draw_contents(painter);
 
             // ui.add(egui::github_link_file!(
             //     "https://github.com/emilk/eframe_template/blob/main/",
