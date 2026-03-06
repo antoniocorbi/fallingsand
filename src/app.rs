@@ -22,6 +22,7 @@ use egui::{
     emath::{self, RectTransform},
     pos2, Color32, Frame, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
+use std::ops::{Index, IndexMut};
 
 // -- Traits: -------------------------------------------------------------
 
@@ -99,7 +100,7 @@ impl FallingSandApp {
 
     fn world_rect(&self) -> Rect {
         let min = pos2(0.0, 0.0);
-        let size: Vec2 = Vec2::new(self.ncols() as f32, self.nrows() as f32);
+        let size: Vec2 = Vec2::new((self.ncols() as f32) - 1.0, (self.nrows() as f32) - 1.0);
         Rect::from_min_size(min, size)
     }
 
@@ -136,17 +137,17 @@ impl FallingSandAppUi {
         // Store the canvas rect
         self.screen_rect = screen_rect;
 
-        // Compute world2screen and screen2world
+        // Compute world2screen and screen2world transforms
         self.w2s = emath::RectTransform::from_to(self.world_rect, self.screen_rect);
         self.s2w = self.w2s.inverse();
     }
 
     pub fn pos2_to_screen(&self, pos: Pos2) -> Pos2 {
-        self.w2s.transform_pos(pos)
+        self.w2s.transform_pos_clamped(pos)
     }
 
     pub fn pos2_to_world(&self, pos: Pos2) -> Pos2 {
-        self.s2w.transform_pos(pos)
+        self.s2w.transform_pos_clamped(pos)
     }
 
     pub fn rect_to_screen(&self, rect: Rect) -> Rect {
@@ -165,6 +166,23 @@ impl FallingSandAppUi {
 }
 
 // -- Impl For: -----------------------------------------------------------
+
+impl Index<usize> for FallingSandAppUi {
+    type Output = Vec<u8>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        // println!("Accessing {index:?}-side of balance immutably");
+        &self.fsapp.data[index]
+    }
+}
+
+impl IndexMut<usize> for FallingSandAppUi {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        // println!("Accessing {index:?}-side of balance immutably");
+        &mut self.fsapp.data[index]
+    }
+}
+
 impl AppUi for FallingSandAppUi {
     fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Response {
         let (response, painter) = ui.allocate_painter(
@@ -194,11 +212,14 @@ impl AppUi for FallingSandAppUi {
         if response.clicked() {
             println!("¡Click izquierdo detectado en el Painter!");
             if let Some(pos) = response.interact_pointer_pos() {
-                println!(
-                    "Click en la posición screen:{:?} / world: {:?}",
-                    pos,
-                    self.pos2_to_world(pos)
-                );
+                let wpos = self.pos2_to_world(pos);
+                let wx = wpos.x as usize;
+                let wy = wpos.y as usize;
+                // println!(
+                //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
+                //     pos, wpos, wx, wy,
+                // );
+                self[wy][wx] = 1;
             }
         }
 
