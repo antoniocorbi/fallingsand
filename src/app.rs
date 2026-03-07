@@ -15,7 +15,7 @@
 
 // -- Consts: -------------------------------------------------------------
 const NELEMENTS: usize = 50;
-const STROKE_W: f32 = 1.0;
+const STROKE_W: f32 = 0.3;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
@@ -35,7 +35,7 @@ trait AppUi {
     fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Painter;
     fn create_stroke_widget(&mut self, ui: &mut Ui) -> egui::Response;
     fn draw_point(&self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
-    fn draw_lines(&mut self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter);
+    fn draw_lines(&self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter);
 }
 
 // -- Types: --------------------------------------------------------------
@@ -108,6 +108,15 @@ impl FallingSandApp {
         let max = pos2(w, h);
         //Rect::from_min_size(min, size)
         Rect::from_min_max(min, max)
+    }
+
+    pub fn clear_data(&mut self) {
+        println!("----------------------------------");
+        for r in 0..self.nrows() {
+            for c in 0..self.ncols() {
+                self.data[r][c] = 0;
+            }
+        }
     }
 
     pub fn show_data(&self) {
@@ -311,7 +320,7 @@ impl AppUi for FallingSandAppUi {
             ui.add(&mut self.stroke);
             ui.separator();
             if ui.button("Clear Canvas").clicked() {
-                //self.lines.clear();
+                self.fsapp.clear_data();
             }
         })
         .response
@@ -338,7 +347,7 @@ impl AppUi for FallingSandAppUi {
         painter.circle_filled(centro, radio, color);
     }
 
-    fn draw_lines(&mut self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter) {
+    fn draw_lines(&self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter) {
         let stroke = Stroke::new(0.5, color);
         painter.line(lines.to_vec(), stroke);
     }
