@@ -13,8 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// -- Consts: -------------------------------------------------------------
+const NELEMENTS: usize = 50;
+const STROKE_W: f32 = 1.0;
+
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
+type Canvas = Vec<Vec<u8>>;
 
 // -- Uses: ---------------------------------------------------------------
 use delegate::delegate;
@@ -29,12 +34,9 @@ use std::ops::{Index, IndexMut};
 trait AppUi {
     fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Painter;
     fn create_stroke_widget(&mut self, ui: &mut Ui) -> egui::Response;
-    fn draw_point(&mut self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
+    fn draw_point(&self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
     fn draw_lines(&mut self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter);
 }
-
-// -- Consts: -------------------------------------------------------------
-const NELEMENTS: usize = 50;
 
 // -- Types: --------------------------------------------------------------
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -42,7 +44,7 @@ const NELEMENTS: usize = 50;
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct FallingSandApp {
     // Data
-    data: Vec<Vec<u8>>,
+    data: Canvas,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -80,7 +82,7 @@ impl Default for FallingSandAppUi {
         Self {
             // Example stuff:
             fsapp,
-            stroke: Stroke::new(2.0, Color32::LIGHT_RED.linear_multiply(1.25)),
+            stroke: Stroke::new(STROKE_W, Color32::CYAN.linear_multiply(1.25)),
             world_rect,
             screen_rect,
             w2s,
@@ -163,7 +165,33 @@ impl FallingSandAppUi {
         self.s2w.transform_rect(rect)
     }
 
-    pub fn draw_contents(&self, painter: egui::Painter) {}
+    fn draw_contents_ascii(&self) {
+        println!("----------------------------------");
+        self.fsapp.data.iter().for_each(|col| {
+            col.iter().for_each(|item| {
+                print!("{}", if *item == 0 { '.' } else { '*' });
+                //println!("Immutable reference (for_each): {}", item);
+            });
+            println!();
+        });
+        println!("----------------------------------\n");
+    }
+
+    pub fn draw_contents(&self, painter: egui::Painter) {
+        // self.draw_contents_ascii();
+        self.fsapp.data.iter().enumerate().for_each(|(ridx, col)| {
+            col.iter().enumerate().for_each(|(cidx, item)| {
+                let wpos = pos2(cidx as f32, ridx as f32);
+                let pos = self.pos2_to_screen(wpos);
+                if *item == 1 {
+                    let mut zoom = self.screen_rect.width() / NELEMENTS as f32;
+                    zoom *= self.stroke.width;
+                    //painter.circle_filled(pos, 2.0, self.stroke.color);
+                    self.draw_point(pos, self.stroke.color, zoom, &painter);
+                }
+            });
+        });
+    }
     // -- Delegates: ----------------------------------------------------------
     delegate! {
           to self.fsapp {
@@ -236,7 +264,7 @@ impl AppUi for FallingSandAppUi {
                 let ctx = ui.ctx();
                 ctx.send_viewport_cmd(egui::ViewportCommand::CursorVisible(false));
                 // Dibujamos un círculo donde esté el ratón mientras arrastramos
-                painter.circle_filled(pos, 2.0, self.stroke.color);
+                // painter.circle_filled(pos, 2.0, Color32::BLUE);
 
                 // También puedes obtener cuánto se ha movido desde el frame anterior
                 // let delta = response.drag_delta();
@@ -260,12 +288,12 @@ impl AppUi for FallingSandAppUi {
         }
 
         // 3. Dibujamos algo basado en el estado
-        let color = if response.hovered() {
-            // egui::Color32::RED
-            self.stroke.color
-        } else {
-            egui::Color32::LIGHT_GRAY
-        };
+        // let color = if response.hovered() {
+        //     // egui::Color32::RED
+        //     self.stroke.color
+        // } else {
+        //     egui::Color32::LIGHT_GRAY
+        // };
 
         // Feedback
         // self.draw_point(response.rect.center(), color, 40.0, &painter);
@@ -289,7 +317,7 @@ impl AppUi for FallingSandAppUi {
         .response
     }
 
-    fn draw_point(&mut self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter) {
+    fn draw_point(&self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter) {
         // También puedes obtener los límites
         // let min = painter.clip_rect().min; // Esquina superior izquierda (Pos2)
         // let max = painter.clip_rect().max; // Esquina inferior derecha (Pos2)
@@ -300,8 +328,8 @@ impl AppUi for FallingSandAppUi {
         // let radio = ((zoom + 0.125) / 2.5).max(3.5);
         // let color = Color32::from_rgb(255, 255, 255);
 
-        if zoom < 1.5 {
-            radio = 1.5;
+        if zoom < 0.5 {
+            radio = 0.5;
         }
         // if zoom > 4.0 {
         //     radio = 4.0;
