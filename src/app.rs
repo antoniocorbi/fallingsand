@@ -14,7 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // -- Consts: -------------------------------------------------------------
-const NELEMENTS: usize = 50;
+const NELEMENTS: usize = 100;
 const STROKE_W: f32 = 0.3;
 
 // -- Types: --------------------------------------------------------------
@@ -27,7 +27,10 @@ use egui::{
     emath::{self, RectTransform},
     pos2, Color32, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
-use std::ops::{Index, IndexMut};
+use std::{
+    ops::{Index, IndexMut},
+    time::Duration,
+};
 
 // -- Traits: -------------------------------------------------------------
 
@@ -125,7 +128,7 @@ impl FallingSandApp {
 
     pub fn show_data(&self) {
         // println!("r:{} / c: {}", self.nrows(), self.ncols());
-        println!("----------------------------------");
+        println!("\n---------D-A-T-A------------------");
         for r in 0..self.nrows() {
             for c in 0..self.ncols() {
                 let e = if self.data[r][c] == 0 { '.' } else { '+' };
@@ -133,7 +136,20 @@ impl FallingSandApp {
             }
             println!();
         }
-        // println!("----------------------------------");
+        println!("----------------------------------");
+    }
+
+    pub fn show_grid(&self, g: &Canvas) {
+        // println!("r:{} / c: {}", self.nrows(), self.ncols());
+        println!("\n--------N-E-X-T-------------------");
+        for r in 0..self.nrows() {
+            for c in 0..self.ncols() {
+                let e = if g[r][c] == 0 { ' ' } else { '*' };
+                print!("{:1}", e);
+            }
+            println!();
+        }
+        println!("----------------------------------");
     }
 
     pub fn next_step(&mut self) {
@@ -150,16 +166,19 @@ impl FallingSandApp {
                     //     println!("nextr: {nextr} , c: {c}");
                     // }
                     let below = self.data[nextr][c];
-                    if below == 0 && r < (self.nrows() - 1) {
+                    if below == 0 && r < (self.nrows() - 2) {
                         //next_data[r][c] = 0;
                         next_data[nextr][c] = 1;
                     } else {
-                        println!("ULTIMA FILA");
+                        //println!("ULTIMA FILA");
                         next_data[r][c] = 1;
                     }
                 }
             }
         }
+        // self.show_data();
+        // self.show_grid(&next_data);
+
         self.data = next_data;
     }
 }
@@ -460,6 +479,7 @@ impl eframe::App for FallingSandAppUi {
         });
 
         ctx.request_repaint();
+        //ctx.request_repaint_after(Duration::from_millis(50));
     }
 }
 
