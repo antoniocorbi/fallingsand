@@ -63,7 +63,7 @@ pub struct FallingSandAppUi {
 impl Default for FallingSandApp {
     fn default() -> Self {
         Self {
-            data: vec![vec![0; NELEMENTS]; NELEMENTS],
+            data: FallingSandApp::create_data(),
         }
     }
 }
@@ -110,6 +110,10 @@ impl FallingSandApp {
         Rect::from_min_max(min, max)
     }
 
+    pub fn create_data() -> Canvas {
+        vec![vec![0; NELEMENTS]; NELEMENTS]
+    }
+
     pub fn clear_data(&mut self) {
         println!("----------------------------------");
         for r in 0..self.nrows() {
@@ -130,6 +134,25 @@ impl FallingSandApp {
             println!();
         }
         // println!("----------------------------------");
+    }
+
+    pub fn next_step(&mut self) {
+        let mut next_data = FallingSandApp::create_data();
+        for r in 0..self.nrows() {
+            for c in 0..self.ncols() {
+                let state = self.data[r][c];
+                let nextr = if r < self.nrows() - 1 { r + 1 } else { r };
+                let nextc = if c < self.ncols() - 1 { c + 1 } else { c };
+                if state == 1 {
+                    let below = self.data[nextr][c];
+                    if below == 0 {
+                        next_data[r][c] = 0;
+                        next_data[nextr][c] = 1;
+                    }
+                }
+            }
+        }
+        self.data = next_data;
     }
 }
 
@@ -205,6 +228,7 @@ impl FallingSandAppUi {
     delegate! {
           to self.fsapp {
             pub fn show_data(&self);
+            pub fn next_step(&mut self);
           }
     }
 }
@@ -404,6 +428,14 @@ impl eframe::App for FallingSandAppUi {
             ui.separator();
 
             let painter = self.create_drawing_widget(ui);
+
+            // ╔══════════════╗
+            // ║ Evolve model ║
+            // ╚══════════════╝
+            self.next_step();
+            // ╔════════════════╗
+            // ║ Draw new model ║
+            // ╚════════════════╝
             self.draw_contents(painter);
 
             // ui.add(egui::github_link_file!(
@@ -418,6 +450,8 @@ impl eframe::App for FallingSandAppUi {
                 egui::warn_if_debug_build(ui);
             });
         });
+
+        ctx.request_repaint();
     }
 }
 
