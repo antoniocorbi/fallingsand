@@ -138,16 +138,24 @@ impl FallingSandApp {
 
     pub fn next_step(&mut self) {
         let mut next_data = FallingSandApp::create_data();
-        for r in 0..self.nrows() {
-            for c in 0..self.ncols() {
+        for r in 0..self.nrows() - 1 {
+            for c in 0..self.ncols() - 1 {
                 let state = self.data[r][c];
-                let nextr = if r < self.nrows() - 1 { r + 1 } else { r };
-                let nextc = if c < self.ncols() - 1 { c + 1 } else { c };
+                // let nextr = if r < self.nrows() { r + 1 } else { r };
+                // let nextc = if c < self.ncols() { c + 1 } else { c };
+                let nextr = r + 1;
+                let nextc = c + 1;
                 if state == 1 {
+                    // if nextr == 50 || c == 50 {
+                    //     println!("nextr: {nextr} , c: {c}");
+                    // }
                     let below = self.data[nextr][c];
-                    if below == 0 {
-                        next_data[r][c] = 0;
+                    if below == 0 && r < (self.nrows() - 1) {
+                        //next_data[r][c] = 0;
                         next_data[nextr][c] = 1;
+                    } else {
+                        println!("ULTIMA FILA");
+                        next_data[r][c] = 1;
                     }
                 }
             }
