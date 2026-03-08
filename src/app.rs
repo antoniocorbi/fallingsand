@@ -25,7 +25,7 @@ type Canvas = Vec<Vec<u8>>;
 use delegate::delegate;
 use egui::{
     emath::{self, RectTransform},
-    pos2, Color32, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
+    pos2, Color32, CornerRadius, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
 use std::{
     ops::{Index, IndexMut},
@@ -38,6 +38,7 @@ trait AppUi {
     fn create_drawing_widget(&mut self, ui: &mut Ui) -> egui::Painter;
     fn create_stroke_widget(&mut self, ui: &mut Ui) -> egui::Response;
     fn draw_point(&self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
+    fn draw_point_sq(&self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter);
     fn draw_lines(&self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter);
 }
 
@@ -246,7 +247,7 @@ impl FallingSandAppUi {
                     let mut zoom = self.screen_rect.width() / NELEMENTS as f32;
                     zoom *= self.stroke.width;
                     //painter.circle_filled(pos, 2.0, self.stroke.color);
-                    self.draw_point(pos, self.stroke.color, zoom, &painter);
+                    self.draw_point_sq(pos, self.stroke.color, zoom, &painter);
                 }
             });
         });
@@ -396,6 +397,22 @@ impl AppUi for FallingSandAppUi {
         // }
 
         painter.circle_filled(centro, radio, color);
+    }
+
+    fn draw_point_sq(&self, p: Point2D, color: Color32, zoom: f32, painter: &egui::Painter) {
+        // También puedes obtener los límites
+        // let min = painter.clip_rect().min; // Esquina superior izquierda (Pos2)
+        // let max = painter.clip_rect().max; // Esquina inferior derecha (Pos2)
+
+        let center = pos2(p.x, p.y);
+        let mut w = zoom;
+        if zoom < 0.5 {
+            w = 0.5;
+        }
+        let size = Vec2::new(w, w);
+        let r = Rect::from_center_size(center, size);
+
+        painter.rect_filled(r, CornerRadius::same(1), color);
     }
 
     fn draw_lines(&self, lines: &Vec<Pos2>, color: Color32, painter: &egui::Painter) {
