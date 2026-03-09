@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // -- Consts: -------------------------------------------------------------
-const NELEMENTS: usize = 100;
-const STROKE_W: f32 = 0.3;
+const NELEMENTS: usize = 30;
+const STROKE_W: f32 = 0.5;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
@@ -27,6 +27,8 @@ use egui::{
     emath::{self, RectTransform},
     pos2, Color32, CornerRadius, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
+//use rand::Rng; // Import the trait to use the methods
+use rand::prelude::*;
 use std::{
     ops::{Index, IndexMut},
     time::Duration,
@@ -44,16 +46,17 @@ trait AppUi {
 
 // -- Types: --------------------------------------------------------------
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+// #[derive(serde::Deserialize, serde::Serialize)]
+// #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct FallingSandApp {
     // Data
     data: Canvas,
+    rng: rand::rngs::ThreadRng,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+// #[derive(serde::Deserialize, serde::Serialize)]
+// #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct FallingSandAppUi {
     pub fsapp: FallingSandApp,
     pub stroke: Stroke,
@@ -66,8 +69,10 @@ pub struct FallingSandAppUi {
 // -- Impl: ---------------------------------------------------------------
 impl Default for FallingSandApp {
     fn default() -> Self {
+        let rng = rand::rng();
         Self {
             data: FallingSandApp::create_data(),
+            rng,
         }
     }
 }
@@ -104,6 +109,18 @@ impl FallingSandApp {
         self.data[0].len()
     }
 
+    pub fn inside_cols(&self, v: usize) -> bool {
+        v < self.ncols()
+    }
+
+    pub fn inside_rows(&self, v: usize) -> bool {
+        v < self.nrows()
+    }
+
+    pub fn inside_canvas(&self, v: Pos2) -> bool {
+        self.inside_cols(v.x as usize) && self.inside_rows(v.y as usize)
+    }
+
     fn world_rect(&self) -> Rect {
         let min = pos2(0.0, 0.0);
         let w = self.ncols() as f32 - 1.0;
@@ -119,7 +136,7 @@ impl FallingSandApp {
     }
 
     pub fn clear_data(&mut self) {
-        println!("----------------------------------");
+        //println!("----------------------------------");
         for r in 0..self.nrows() {
             for c in 0..self.ncols() {
                 self.data[r][c] = 0;
@@ -153,34 +170,83 @@ impl FallingSandApp {
         println!("----------------------------------");
     }
 
+    // // Check every cell
+    // for (let i = 0; i < cols; i++) {
+    //   for (let j = 0; j < rows ; j++) {
+    //     // What is the state?
+    //     let state = grid[i][j];
+    //
+    //     // If it's a piece of sand!
+    //     if (state > 0) {
+    //       // What is below?
+    //       let below = grid[i][j + 1];
+    //
+    //       // Randomly fall left or right
+    //       let dir = 1;
+    //       if (random(1) < 0.5) {
+    //         dir *= -1;
+    //       }
+    //
+    //       // Check below left or right
+    //       let belowA = -1;
+    //       let belowB = -1;
+    //       if (withinCols(i + dir)) {
+    //         belowA = grid[i + dir][j + 1];
+    //       }
+    //       if (withinCols(i - dir)) {
+    //         belowB = grid[i - dir][j + 1];
+    //       }
+    //
+    //
+    //       // Can it fall below or left or right?
+    //       if (below === 0) {
+    //         nextGrid[i][j + 1] = state;
+    //       } else if (belowA === 0) {
+    //         nextGrid[i + dir][j + 1] = state;
+    //       } else if (belowB === 0) {
+    //         nextGrid[i - dir][j + 1] = state;
+    //       // Stay put!
+    //       } else {
+    //         nextGrid[i][j] = state;
+    //       }
+    //     }
+    //   }
+    // }
+    // grid = nextGrid;
+
     pub fn next_step(&mut self) {
-        let mut next_data = FallingSandApp::create_data();
-        for r in 0..self.nrows() - 1 {
-            for c in 0..self.ncols() - 1 {
+        let mut next_data = FallingSandApp::create_data(); // Tablero nuevo vacío
+
+        let rows = self.nrows();
+        let cols = self.ncols();
+
+        for r in 0..rows {
+            for c in 0..cols {
+                let randv = self.rng.random_range(0.0..=1.0);
                 let state = self.data[r][c];
-                // let nextr = if r < self.nrows() { r + 1 } else { r };
-                // let nextc = if c < self.ncols() { c + 1 } else { c };
-                let nextr = r + 1;
-                let nextc = c + 1;
-                if state == 1 {
-                    // if nextr == 50 || c == 50 {
-                    //     println!("nextr: {nextr} , c: {c}");
-                    // }
-                    let below = self.data[nextr][c];
-                    if below == 0 && r < (self.nrows() - 2) {
-                        //next_data[r][c] = 0;
-                        next_data[nextr][c] = 1;
+
+                if state > 0 {
+                    // Si estamos en la última fila, la arena se queda donde está
+                    if r == rows - 1 {
+                        next_data[r][c] = state;
                     } else {
-                        //println!("ULTIMA FILA");
-                        next_data[r][c] = 1;
+                        let nextr = r + 1;
+                        let below = self.data[nextr][c];
+
+                        if below == 0 {
+                            // Cae
+                            next_data[nextr][c] = state;
+                        } else {
+                            // Se queda quieta porque hay algo debajo
+                            // IMPORTANTE: Usamos += o comprobamos si ya hay algo para no sobrescribir
+                            next_data[r][c] = state;
+                        }
                     }
                 }
             }
         }
-        // self.show_data();
-        // self.show_grid(&next_data);
-
         self.data = next_data;
+        self.show_data();
     }
 }
 
@@ -423,9 +489,9 @@ impl AppUi for FallingSandAppUi {
 
 impl eframe::App for FallingSandAppUi {
     /// Called by the framework to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
+    // fn save(&mut self, storage: &mut dyn eframe::Storage) {
+    //     eframe::set_value(storage, eframe::APP_KEY, self);
+    // }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -455,7 +521,7 @@ impl eframe::App for FallingSandAppUi {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading(egui::RichText::new("·:Falling Sand App:·").color(egui::Color32::RED));
+            ui.heading(egui::RichText::new("·:Falling Sand App:·").color(egui::Color32::LIGHT_RED));
 
             self.create_stroke_widget(ui);
 
