@@ -20,12 +20,13 @@ const PCLOUD_W: usize = 5;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
-type Canvas = Vec<Vec<u8>>;
+type Canvas = Vec<Vec<f32>>;
 
 // -- Uses: ---------------------------------------------------------------
 use delegate::delegate;
 use egui::{
     emath::{self, RectTransform},
+    epaint::Hsva,
     pos2, Color32, CornerRadius, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
 
@@ -63,6 +64,7 @@ pub struct FallingSandAppUi {
     pub screen_rect: Rect,
     pub w2s: RectTransform,
     pub s2w: RectTransform,
+    pub hueval: f32,
 }
 
 // -- Impl: ---------------------------------------------------------------
@@ -93,6 +95,7 @@ impl Default for FallingSandAppUi {
             screen_rect,
             w2s,
             s2w,
+            hueval: 1.0,
         }
     }
 }
@@ -129,14 +132,14 @@ impl FallingSandApp {
     }
 
     pub fn create_data() -> Canvas {
-        vec![vec![0; NELEMENTS]; NELEMENTS]
+        vec![vec![0.0; NELEMENTS]; NELEMENTS]
     }
 
     pub fn clear_data(&mut self) {
         //println!("----------------------------------");
         for r in 0..self.nrows() {
             for c in 0..self.ncols() {
-                self.data[r][c] = 0;
+                self.data[r][c] = 0.0;
             }
         }
     }
@@ -146,7 +149,7 @@ impl FallingSandApp {
         println!("\n---------D-A-T-A------------------");
         for r in 0..self.nrows() {
             for c in 0..self.ncols() {
-                let e = if self.data[r][c] == 0 { '.' } else { '+' };
+                let e = if self.data[r][c] == 0.0 { '.' } else { '+' };
                 print!("{:1}", e);
             }
             println!();
@@ -159,57 +162,13 @@ impl FallingSandApp {
         println!("\n--------N-E-X-T-------------------");
         for r in 0..self.nrows() {
             for c in 0..self.ncols() {
-                let e = if g[r][c] == 0 { ' ' } else { '*' };
+                let e = if g[r][c] == 0.0 { ' ' } else { '*' };
                 print!("{:1}", e);
             }
             println!();
         }
         println!("----------------------------------");
     }
-
-    // // Check every cell
-    // for (let i = 0; i < cols; i++) {
-    //   for (let j = 0; j < rows ; j++) {
-    //     // What is the state?
-    //     let state = grid[i][j];
-    //
-    //     // If it's a piece of sand!
-    //     if (state > 0) {
-    //       // What is below?
-    //       let below = grid[i][j + 1];
-    //
-    //       // Randomly fall left or right
-    //       let dir = 1;
-    //       if (random(1) < 0.5) {
-    //         dir *= -1;
-    //       }
-    //
-    //       // Check below left or right
-    //       let belowA = -1;
-    //       let belowB = -1;
-    //       if (withinCols(i + dir)) {
-    //         belowA = grid[i + dir][j + 1];
-    //       }
-    //       if (withinCols(i - dir)) {
-    //         belowB = grid[i - dir][j + 1];
-    //       }
-    //
-    //
-    //       // Can it fall below or left or right?
-    //       if (below === 0) {
-    //         nextGrid[i][j + 1] = state;
-    //       } else if (belowA === 0) {
-    //         nextGrid[i + dir][j + 1] = state;
-    //       } else if (belowB === 0) {
-    //         nextGrid[i - dir][j + 1] = state;
-    //       // Stay put!
-    //       } else {
-    //         nextGrid[i][j] = state;
-    //       }
-    //     }
-    //   }
-    // }
-    // grid = nextGrid;
 
     pub fn next_step(&mut self) {
         let mut next_data = FallingSandApp::create_data(); // Tablero nuevo vacío
@@ -221,11 +180,11 @@ impl FallingSandApp {
             for c in 0..cols {
                 let state = self.data[r][c];
 
-                if state > 0 {
+                if state > 0.0 {
                     let dir = if rand::random() { 1 } else { -1 };
 
-                    let mut belowL: u8 = u8::MAX;
-                    let mut belowR: u8 = u8::MAX;
+                    let mut belowL: f32 = -1.0;
+                    let mut belowR: f32 = -1.0;
                     let lcol = c as isize - dir as isize;
                     let rcol = c as isize + dir as isize;
 
@@ -239,20 +198,20 @@ impl FallingSandApp {
                         belowR = self.data[r + 1][rcol as usize];
                     }
 
-                    // Si estamos en la última fila, la arena se queda donde está
+                    // If on last row, the grain of sand stays there
                     if r == rows - 1 {
                         next_data[r][c] = state;
                     } else {
                         let nextr = r + 1;
                         let below = self.data[nextr][c];
 
-                        if below == 0 {
+                        if below == 0.0 {
                             // Cae
                             next_data[nextr][c] = state;
-                        } else if belowL == 0 {
+                        } else if belowL == 0.0 {
                             // Desliza a la izqda.
                             next_data[r + 1][lcol as usize] = state;
-                        } else if belowR == 0 {
+                        } else if belowR == 0.0 {
                             // Desliza a la dcha.
                             next_data[r + 1][rcol as usize] = state;
                         } else {
@@ -313,7 +272,7 @@ impl FallingSandAppUi {
         println!("----------------------------------");
         self.fsapp.data.iter().for_each(|col| {
             col.iter().for_each(|item| {
-                print!("{}", if *item == 0 { '.' } else { '*' });
+                print!("{}", if *item == 0.0 { '.' } else { '*' });
                 //println!("Immutable reference (for_each): {}", item);
             });
             println!();
@@ -327,7 +286,7 @@ impl FallingSandAppUi {
             col.iter().enumerate().for_each(|(cidx, item)| {
                 let wpos = pos2(cidx as f32, ridx as f32);
                 let pos = self.pos2_to_screen(wpos);
-                if *item == 1 {
+                if *item > 0.0 {
                     let mut zoom = self.screen_rect.width() / NELEMENTS as f32;
                     zoom *= self.stroke.width;
                     //painter.circle_filled(pos, 2.0, self.stroke.color);
@@ -348,7 +307,7 @@ impl FallingSandAppUi {
 // -- Impl For: -----------------------------------------------------------
 
 impl Index<usize> for FallingSandAppUi {
-    type Output = Vec<u8>;
+    type Output = Vec<f32>;
 
     fn index(&self, index: usize) -> &Self::Output {
         // println!("Accessing {index:?}-side of balance immutably");
@@ -399,7 +358,7 @@ impl AppUi for FallingSandAppUi {
                 //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
                 //     pos, wpos, wx, wy,
                 // );
-                self[wy][wx] = 1;
+                self[wy][wx] = self.hueval;
             }
         }
 
@@ -422,7 +381,7 @@ impl AppUi for FallingSandAppUi {
                 //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
                 //     pos, wpos, wx, wy,
                 // );
-                self[wy][wx] = 1;
+                self[wy][wx] = self.hueval;
             }
         }
 
