@@ -255,8 +255,10 @@ impl FallingSandApp {
                             // Cae
                             next_data[nextr][c] = state;
                         } else if belowL == 0 {
+                            // Desliza a la izqda.
                             next_data[r + 1][lcol as usize] = state;
                         } else if belowR == 0 {
+                            // Desliza a la dcha.
                             next_data[r + 1][rcol as usize] = state;
                         } else {
                             // Se queda quieta porque hay algo debajo
