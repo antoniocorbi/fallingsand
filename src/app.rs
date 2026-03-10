@@ -14,9 +14,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // -- Consts: -------------------------------------------------------------
-const NELEMENTS: usize = 30;
+const NELEMENTS: usize = 100;
 const STROKE_W: f32 = 0.25;
-const PCLOUD_W: usize = 5;
+const PCLOUD_W: usize = 3;
+const HUEVALINIT: f32 = 0.1;
+const HUEDELTA: f32 = 0.0025;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
@@ -95,7 +97,7 @@ impl Default for FallingSandAppUi {
             screen_rect,
             w2s,
             s2w,
-            hueval: 1.0,
+            hueval: HUEVALINIT,
         }
     }
 }
@@ -243,6 +245,13 @@ impl FallingSandAppUi {
         Default::default()
     }
 
+    pub fn update_hueval(&mut self, d: f32) {
+        self.hueval += d;
+        if self.hueval > 1.0 {
+            self.hueval = HUEVALINIT;
+        }
+    }
+
     pub fn update_transforms(&mut self, screen_rect: Rect) {
         // Store the canvas rect
         self.screen_rect = screen_rect;
@@ -286,11 +295,18 @@ impl FallingSandAppUi {
             col.iter().enumerate().for_each(|(cidx, item)| {
                 let wpos = pos2(cidx as f32, ridx as f32);
                 let pos = self.pos2_to_screen(wpos);
+
                 if *item > 0.0 {
+                    // *item is the hueval, create color from it.
+                    let hsb_color = Hsva::new(*item, 1.0, 1.0, 1.0);
+                    let c: Color32 = hsb_color.into();
+
+                    //dbg!(c);
+
                     let mut zoom = self.screen_rect.width() / NELEMENTS as f32;
                     zoom *= self.stroke.width;
                     //painter.circle_filled(pos, 2.0, self.stroke.color);
-                    self.draw_point_sq(pos, self.stroke.color, zoom, &painter);
+                    self.draw_point_sq(pos, /*self.stroke.color*/ c, zoom, &painter);
                 }
             });
         });
@@ -358,6 +374,9 @@ impl AppUi for FallingSandAppUi {
                 //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
                 //     pos, wpos, wx, wy,
                 // );
+
+                // Update Hueval
+                // self.update_hueval(HUEDELTA);
                 self[wy][wx] = self.hueval;
             }
         }
@@ -381,6 +400,9 @@ impl AppUi for FallingSandAppUi {
                 //     "Click en la posición screen:{:?} / world: {:?} / w.x: {} · w.y: {} ",
                 //     pos, wpos, wx, wy,
                 // );
+
+                // Update Hueval
+                // self.update_hueval(HUEDELTA);
                 self[wy][wx] = self.hueval;
             }
         }
@@ -391,17 +413,7 @@ impl AppUi for FallingSandAppUi {
             ctx.send_viewport_cmd(egui::ViewportCommand::CursorVisible(true));
         }
 
-        // 3. Dibujamos algo basado en el estado
-        // let color = if response.hovered() {
-        //     // egui::Color32::RED
-        //     self.stroke.color
-        // } else {
-        //     egui::Color32::LIGHT_GRAY
-        // };
-
-        // Feedback
-        // self.draw_point(response.rect.center(), color, 40.0, &painter);
-        //painter.circle_filled(response.rect.center(), 40.0, color);
+        self.update_hueval(HUEDELTA);
 
         //response
         painter
