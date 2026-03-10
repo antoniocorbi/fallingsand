@@ -298,7 +298,7 @@ impl FallingSandAppUi {
 
                 if *item > 0.0 {
                     // *item is the hueval, create color from it.
-                    let hsb_color = Hsva::new(*item, 1.0, 1.0, 1.0);
+                    let hsb_color = Hsva::new(*item, 0.8, 0.9, 1.0);
                     let c: Color32 = hsb_color.into();
 
                     //dbg!(c);
@@ -306,7 +306,7 @@ impl FallingSandAppUi {
                     let mut zoom = self.screen_rect.width() / NELEMENTS as f32;
                     zoom *= self.stroke.width;
                     //painter.circle_filled(pos, 2.0, self.stroke.color);
-                    self.draw_point_sq(pos, /*self.stroke.color*/ c, zoom, &painter);
+                    self.draw_point(pos, /*self.stroke.color*/ c, zoom, &painter);
                 }
             });
         });
