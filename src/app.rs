@@ -15,7 +15,8 @@
 
 // -- Consts: -------------------------------------------------------------
 const NELEMENTS: usize = 30;
-const STROKE_W: f32 = 0.5;
+const STROKE_W: f32 = 0.25;
+const PCLOUD_W: usize = 5;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
@@ -222,10 +223,27 @@ impl FallingSandApp {
 
         for r in 0..rows {
             for c in 0..cols {
-                let randv = self.rng.random_range(0.0..=1.0);
                 let state = self.data[r][c];
 
                 if state > 0 {
+                    let randv = self.rng.random_range(0.0..=1.0);
+                    let mut dir: i8 = 1;
+                    if randv < 0.5 {
+                        dir *= -1;
+                    }
+                    let mut belowL: u8 = u8::MAX;
+                    let mut belowR: u8 = u8::MAX;
+                    let lcol = c as isize - dir as isize;
+                    let rcol = c as isize + dir as isize;
+
+                    if r < (rows - 1) && lcol >= 0 && self.inside_cols(lcol as usize) {
+                        belowL = self.data[r + 1][lcol as usize];
+                    }
+
+                    if r < (rows - 1) && rcol >= 0 && self.inside_cols(rcol as usize) {
+                        belowR = self.data[r + 1][rcol as usize];
+                    }
+
                     // Si estamos en la última fila, la arena se queda donde está
                     if r == rows - 1 {
                         next_data[r][c] = state;
@@ -236,9 +254,12 @@ impl FallingSandApp {
                         if below == 0 {
                             // Cae
                             next_data[nextr][c] = state;
+                        } else if belowL == 0 {
+                            next_data[r + 1][lcol as usize] = state;
+                        } else if belowR == 0 {
+                            next_data[r + 1][rcol as usize] = state;
                         } else {
                             // Se queda quieta porque hay algo debajo
-                            // IMPORTANTE: Usamos += o comprobamos si ya hay algo para no sobrescribir
                             next_data[r][c] = state;
                         }
                     }
