@@ -28,8 +28,7 @@ use egui::{
     emath::{self, RectTransform},
     pos2, Color32, CornerRadius, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
 };
-//use rand::Rng; // Import the trait to use the methods
-use rand::prelude::*;
+
 use std::{
     ops::{Index, IndexMut},
     time::Duration,
@@ -52,7 +51,6 @@ trait AppUi {
 pub struct FallingSandApp {
     // Data
     data: Canvas,
-    rng: rand::rngs::ThreadRng,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -70,10 +68,8 @@ pub struct FallingSandAppUi {
 // -- Impl: ---------------------------------------------------------------
 impl Default for FallingSandApp {
     fn default() -> Self {
-        let rng = rand::rng();
         Self {
             data: FallingSandApp::create_data(),
-            rng,
         }
     }
 }
@@ -226,20 +222,19 @@ impl FallingSandApp {
                 let state = self.data[r][c];
 
                 if state > 0 {
-                    let randv = self.rng.random_range(0.0..=1.0);
-                    let mut dir: i8 = 1;
-                    if randv < 0.5 {
-                        dir *= -1;
-                    }
+                    let dir = if rand::random() { 1 } else { -1 };
+
                     let mut belowL: u8 = u8::MAX;
                     let mut belowR: u8 = u8::MAX;
                     let lcol = c as isize - dir as isize;
                     let rcol = c as isize + dir as isize;
 
+                    // Get below left cell contents
                     if r < (rows - 1) && lcol >= 0 && self.inside_cols(lcol as usize) {
                         belowL = self.data[r + 1][lcol as usize];
                     }
 
+                    // Get below right cell contents
                     if r < (rows - 1) && rcol >= 0 && self.inside_cols(rcol as usize) {
                         belowR = self.data[r + 1][rcol as usize];
                     }
@@ -269,7 +264,7 @@ impl FallingSandApp {
             }
         }
         self.data = next_data;
-        self.show_data();
+        //self.show_data();
     }
 }
 
