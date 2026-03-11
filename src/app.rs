@@ -14,9 +14,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // -- Consts: -------------------------------------------------------------
-const NELEMENTS: usize = 100;
+const NELEMENTS: usize = 300;
 const STROKE_W: f32 = 0.25;
-const PCLOUD_W: usize = 3;
+const PCLOUD_W: isize = 10;
 const HUEVALINIT: f32 = 0.1;
 const HUEDELTA: f32 = 0.0025;
 
@@ -30,6 +30,7 @@ use egui::{
     emath::{self, RectTransform},
     epaint::Hsva,
     pos2, Color32, CornerRadius, Frame, PointerButton, Pos2, Rect, Sense, Stroke, Ui, Vec2, Window,
+    X11WindowType,
 };
 
 use std::{
@@ -85,6 +86,8 @@ impl Default for FallingSandAppUi {
         let screen_rect = Rect::ZERO;
         let w2s = emath::RectTransform::from_to(world_rect, screen_rect);
         let s2w = w2s.inverse();
+        let color = Color32::DARK_GREEN;
+        let hue = egui::epaint::Hsva::from(color).h;
 
         // println!("Just created app has:");
         // fsapp.show_data();
@@ -92,12 +95,13 @@ impl Default for FallingSandAppUi {
         Self {
             // Example stuff:
             fsapp,
-            stroke: Stroke::new(STROKE_W, Color32::CYAN.linear_multiply(1.25)),
+            stroke: Stroke::new(STROKE_W, color),
             world_rect,
             screen_rect,
             w2s,
             s2w,
-            hueval: HUEVALINIT,
+            //hueval: HUEVALINIT,
+            hueval: hue,
         }
     }
 }
@@ -246,9 +250,28 @@ impl FallingSandAppUi {
     }
 
     pub fn update_hueval(&mut self, d: f32) {
+        let color = self.stroke.color;
+        let hue = egui::epaint::Hsva::from(color).h;
+
         self.hueval += d;
         if self.hueval > 1.0 {
-            self.hueval = HUEVALINIT;
+            self.hueval = hue;
+            //self.hueval = HUEVALINIT;
+        }
+    }
+
+    pub fn deploy_grains(&mut self, p: Pos2) {
+        for x in p.x as isize - PCLOUD_W..p.x as isize + PCLOUD_W {
+            if x > 0 && self.fsapp.inside_cols(x as usize) {
+                for y in p.y as isize - PCLOUD_W..p.y as isize + PCLOUD_W {
+                    if y > 0 && self.fsapp.inside_rows(y as usize) {
+                        let pempty = self[y as usize][x as usize] == 0.0;
+                        if pempty && rand::random() {
+                            self[y as usize][x as usize] = self.hueval;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -298,7 +321,7 @@ impl FallingSandAppUi {
 
                 if *item > 0.0 {
                     // *item is the hueval, create color from it.
-                    let hsb_color = Hsva::new(*item, 0.8, 0.9, 1.0);
+                    let hsb_color = Hsva::new(*item, 0.85, 0.95, 1.0);
                     let c: Color32 = hsb_color.into();
 
                     //dbg!(c);
@@ -377,7 +400,9 @@ impl AppUi for FallingSandAppUi {
 
                 // Update Hueval
                 // self.update_hueval(HUEDELTA);
-                self[wy][wx] = self.hueval;
+
+                // self[wy][wx] = self.hueval;
+                self.deploy_grains(wpos);
             }
         }
 
@@ -403,7 +428,8 @@ impl AppUi for FallingSandAppUi {
 
                 // Update Hueval
                 // self.update_hueval(HUEDELTA);
-                self[wy][wx] = self.hueval;
+                // self[wy][wx] = self.hueval;
+                self.deploy_grains(wpos);
             }
         }
 
