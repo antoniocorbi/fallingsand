@@ -252,6 +252,10 @@ impl FallingSandAppUi {
         Default::default()
     }
 
+    fn are_nearly_equal(a: f32, b: f32, tolerance: f32) -> bool {
+        (a - b).abs() < tolerance
+    }
+
     pub fn set_hueval(&mut self, color: Color32) {
         self.hueval = egui::epaint::Hsva::from(color).h;
     }
@@ -262,8 +266,11 @@ impl FallingSandAppUi {
 
         self.hueval += d;
         if self.hueval > 1.0 {
-            self.hueval = hue;
-            //self.hueval = HUEVALINIT;
+            if FallingSandAppUi::are_nearly_equal(hue, 1.0, 0.5) {
+                self.hueval = HUEVALINIT;
+            } else {
+                self.hueval = hue;
+            }
         }
     }
 
