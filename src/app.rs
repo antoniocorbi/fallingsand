@@ -68,6 +68,7 @@ pub struct FallingSandAppUi {
     pub w2s: RectTransform,
     pub s2w: RectTransform,
     pub hueval: f32,
+    pub old_color: Color32,
 }
 
 // -- Impl: ---------------------------------------------------------------
@@ -88,6 +89,7 @@ impl Default for FallingSandAppUi {
         let s2w = w2s.inverse();
         let color = Color32::DARK_GREEN;
         let hue = egui::epaint::Hsva::from(color).h;
+        let old_color = Color32::PLACEHOLDER;
 
         // println!("Just created app has:");
         // fsapp.show_data();
@@ -102,6 +104,7 @@ impl Default for FallingSandAppUi {
             s2w,
             //hueval: HUEVALINIT,
             hueval: hue,
+            old_color,
         }
     }
 }
@@ -247,6 +250,10 @@ impl FallingSandAppUi {
         //     Default::default()
         // }
         Default::default()
+    }
+
+    pub fn set_hueval(&mut self, color: Color32) {
+        self.hueval = egui::epaint::Hsva::from(color).h;
     }
 
     pub fn update_hueval(&mut self, d: f32) {
@@ -403,6 +410,7 @@ impl AppUi for FallingSandAppUi {
 
                 // self[wy][wx] = self.hueval;
                 self.deploy_grains(wpos);
+                self.update_hueval(HUEDELTA);
             }
         }
 
@@ -430,6 +438,7 @@ impl AppUi for FallingSandAppUi {
                 // self.update_hueval(HUEDELTA);
                 // self[wy][wx] = self.hueval;
                 self.deploy_grains(wpos);
+                self.update_hueval(HUEDELTA);
             }
         }
 
@@ -439,7 +448,7 @@ impl AppUi for FallingSandAppUi {
             ctx.send_viewport_cmd(egui::ViewportCommand::CursorVisible(true));
         }
 
-        self.update_hueval(HUEDELTA);
+        //self.update_hueval(HUEDELTA);
 
         //response
         painter
@@ -447,6 +456,12 @@ impl AppUi for FallingSandAppUi {
 
     fn create_stroke_widget(&mut self, ui: &mut egui::Ui) -> egui::Response {
         //let mut stroke: Stroke = self.stroke;
+
+        if self.stroke.color != self.old_color {
+            // println!("NEW COLOR");
+            self.set_hueval(self.stroke.color);
+            self.old_color = self.stroke.color;
+        }
 
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Grains props.").color(egui::Color32::GREEN));
