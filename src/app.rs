@@ -22,7 +22,8 @@ const HUEDELTA: f32 = 0.0025;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
-type Canvas = Vec<Vec<f32>>;
+//type Canvas = Vec<Vec<f32>>;
+type Canvas = [[f32; NELEMENTS]; NELEMENTS];
 
 // -- Uses: ---------------------------------------------------------------
 use delegate::delegate;
@@ -141,7 +142,7 @@ impl FallingSandApp {
     }
 
     pub fn create_data() -> Canvas {
-        vec![vec![0.0; NELEMENTS]; NELEMENTS]
+        [[0.0; NELEMENTS]; NELEMENTS]
     }
 
     pub fn clear_data(&mut self) {
@@ -360,7 +361,7 @@ impl FallingSandAppUi {
 // -- Impl For: -----------------------------------------------------------
 
 impl Index<usize> for FallingSandAppUi {
-    type Output = Vec<f32>;
+    type Output = [f32];
 
     fn index(&self, index: usize) -> &Self::Output {
         // println!("Accessing {index:?}-side of balance immutably");
