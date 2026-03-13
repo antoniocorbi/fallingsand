@@ -18,14 +18,12 @@ const NELEMENTS: usize = 300;
 const STROKE_W: f32 = 0.25;
 const PCLOUD_W: isize = 10;
 const HUEVALINIT: f32 = 0.1;
-const HUEDELTA: f32 = 0.005;
-const GRAVITY: f32 = 0.1;
+const HUEDELTA: f32 = 0.0025;
 
 // -- Types: --------------------------------------------------------------
 type Point2D = Pos2;
 //type Canvas = Vec<Vec<f32>>;
 type Canvas = [[f32; NELEMENTS]; NELEMENTS];
-type Velocity = [[f32; NELEMENTS]; NELEMENTS];
 
 // -- Uses: ---------------------------------------------------------------
 use delegate::delegate;
@@ -58,7 +56,6 @@ trait AppUi {
 pub struct FallingSandApp {
     // Data
     data: Canvas,
-    velocitydata: Velocity,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -80,7 +77,6 @@ impl Default for FallingSandApp {
     fn default() -> Self {
         Self {
             data: FallingSandApp::create_data(),
-            velocitydata: FallingSandApp::create_velocitydata(),
         }
     }
 }
@@ -158,19 +154,6 @@ impl FallingSandApp {
         }
     }
 
-    pub fn create_velocitydata() -> Canvas {
-        [[0.0; NELEMENTS]; NELEMENTS]
-    }
-
-    pub fn clear_velocitydata(&mut self) {
-        //println!("----------------------------------");
-        for r in 0..self.nrows() {
-            for c in 0..self.ncols() {
-                self.velocitydata[r][c] = 0.0;
-            }
-        }
-    }
-
     pub fn show_data(&self) {
         // println!("r:{} / c: {}", self.nrows(), self.ncols());
         println!("\n---------D-A-T-A------------------");
@@ -199,7 +182,6 @@ impl FallingSandApp {
 
     pub fn next_step(&mut self) {
         let mut next_data = FallingSandApp::create_data(); // Tablero nuevo vacío
-        let mut next_velocity = FallingSandApp::create_velocitydata(); // Nuevas velocidades
 
         let rows = self.nrows();
         let cols = self.ncols();
@@ -207,79 +189,50 @@ impl FallingSandApp {
         for r in 0..rows {
             for c in 0..cols {
                 let state = self.data[r][c];
-                let mut y = r;
-                let mut moved = false;
-
-                // for (let y = newPos; y > j; y--) {
-                // // let below = grid[i][y];
-                // // let dir = 1;
-                // // if (random(1) < 0.5) {
-                //   dir *= -1;
-                //  }
 
                 if state > 0.0 {
-                    // Gravity management
-                    let velocity = self.velocitydata[r][c];
-                    let newrow = r as f32 + velocity;
-                    y = newrow as usize;
+                    let dir = if rand::random() { 1 } else { -1 };
 
-                    while y > r {
-                        let dir = if rand::random() { 1 } else { -1 };
+                    let mut belowL: f32 = -1.0;
+                    let mut belowR: f32 = -1.0;
+                    let lcol = c as isize - dir as isize;
+                    let rcol = c as isize + dir as isize;
 
-                        let mut belowL: f32 = -1.0;
-                        let mut belowR: f32 = -1.0;
-                        let lcol = c as isize - dir as isize;
-                        let rcol = c as isize + dir as isize;
-
-                        // Get below left cell contents
-                        if y < (rows - 1) && lcol >= 0 && self.inside_cols(lcol as usize) {
-                            belowL = self.data[y][lcol as usize];
-                        }
-
-                        // Get below right cell contents
-                        if y < (rows - 1) && rcol >= 0 && self.inside_cols(rcol as usize) {
-                            belowR = self.data[y][rcol as usize];
-                        }
-
-                        // If on last row, the grain of sand stays there
-                        if y == rows - 1 {
-                            next_data[y][c] = state;
-                        } else {
-                            if y >= rows {
-                                y = rows - 1;
-                            }
-
-                            let nextr = r + 1;
-                            let below = self.data[y][c];
-
-                            if below == 0.0 {
-                                // Cae
-                                next_data[y][c] = state;
-                                next_velocity[y][c] = velocity + GRAVITY;
-                                moved = true;
-                            } else if belowL == 0.0 {
-                                // Desliza a la izqda.
-                                next_data[y][lcol as usize] = state;
-                                next_velocity[y][lcol as usize] = velocity + GRAVITY;
-                                moved = true;
-                            } else if belowR == 0.0 {
-                                // Desliza a la dcha.
-                                next_data[y][rcol as usize] = state;
-                                next_velocity[y][rcol as usize] = velocity + GRAVITY;
-                                moved = true;
-                            }
-                        }
-                        y -= 1;
+                    // Get below left cell contents
+                    if r < (rows - 1) && lcol >= 0 && self.inside_cols(lcol as usize) {
+                        belowL = self.data[r + 1][lcol as usize];
                     }
-                }
-                if state > 0.0 && !moved {
-                    next_data[r][c] = self.data[r][c];
-                    next_velocity[r][c] = self.velocitydata[r][c] + GRAVITY;
+
+                    // Get below right cell contents
+                    if r < (rows - 1) && rcol >= 0 && self.inside_cols(rcol as usize) {
+                        belowR = self.data[r + 1][rcol as usize];
+                    }
+
+                    // If on last row, the grain of sand stays there
+                    if r == rows - 1 {
+                        next_data[r][c] = state;
+                    } else {
+                        let nextr = r + 1;
+                        let below = self.data[nextr][c];
+
+                        if below == 0.0 {
+                            // Cae
+                            next_data[nextr][c] = state;
+                        } else if belowL == 0.0 {
+                            // Desliza a la izqda.
+                            next_data[r + 1][lcol as usize] = state;
+                        } else if belowR == 0.0 {
+                            // Desliza a la dcha.
+                            next_data[r + 1][rcol as usize] = state;
+                        } else {
+                            // Se queda quieta porque hay algo debajo
+                            next_data[r][c] = state;
+                        }
+                    }
                 }
             }
         }
         self.data = next_data;
-        self.velocitydata = next_velocity;
         //self.show_data();
     }
 }
@@ -398,10 +351,10 @@ impl FallingSandAppUi {
     }
     // -- Delegates: ----------------------------------------------------------
     delegate! {
-      to self.fsapp {
-        pub fn show_data(&self);
-        pub fn next_step(&mut self);
-      }
+          to self.fsapp {
+            pub fn show_data(&self);
+            pub fn next_step(&mut self);
+          }
     }
 }
 
@@ -466,9 +419,6 @@ impl AppUi for FallingSandAppUi {
                 // self[wy][wx] = self.hueval;
                 self.deploy_grains(wpos);
                 self.update_hueval(HUEDELTA);
-
-                // Velocity
-                self.fsapp.velocitydata[wy][wx] = 1.0;
             }
         }
 
@@ -497,9 +447,6 @@ impl AppUi for FallingSandAppUi {
                 // self[wy][wx] = self.hueval;
                 self.deploy_grains(wpos);
                 self.update_hueval(HUEDELTA);
-
-                // Velocity
-                self.fsapp.velocitydata[wy][wx] = 1.0;
             }
         }
 
